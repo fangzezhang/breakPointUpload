@@ -1,7 +1,7 @@
 {
   "name": "breakpointupload",
   "version": "1.0.0",
-  "description": "",
+  "description": "断点上传的前后端处理",
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
