@@ -31,8 +31,8 @@ async function mergeChunks(fileName) {
   const chunkFiles = fs.readdirSync(UPLOAD_DIR)
     .filter(file => file.startsWith(fileName + '-'))
     .sort((a, b) => {
-      const aIndex = a[a.length - 1];
-      const bIndex = a[b.length - 1];
+      const aIndex = a.slice(fileName.length + 1);
+      const bIndex = b.slice(fileName.length + 1);
 
       return aIndex - bIndex;
     });
