@@ -6,17 +6,40 @@
 </head>
 <body>
 <input type="file" id="file">
+<p>上传进度: <span id="percent"></span></p>
 <hr>
 <button onclick="uploadHandler()">开始上传</button>
 <button onclick="abortHandler()">取消上传</button>
 <script>
-  let abortController;
+  let abortController,
+    fileSize;
   let uploadedBytes = 0;
+  let obj = {
+    uploadedBytes: 0,
+  };
   const fileInput = document.getElementById('file');
+  const percent = document.getElementById('percent');
 
   fileInput.addEventListener('change', () => {
     uploadedBytes = 0;
   });
+
+  function defineReactive(obj, key, val) {
+    Object.defineProperty(obj, key, {
+      enumerable: true,
+      configurable: true,
+      get: () => {
+        return val;
+      },
+      set: (newVal) => {
+        if (newVal === val) return;
+        val = newVal;
+        percent.innerHTML = `${(newVal / fileSize * 100).toFixed(2)}%`
+      }
+    })
+  }
+
+  defineReactive(obj, 'uploadedBytes', obj.uploadedBytes);
 
   function Scheduler() {
     this.queue = [];
@@ -25,7 +48,7 @@
   }
   Scheduler.prototype.add = function(task) {
     this.queue.push(task);
-    this.scheduler();
+    return this.scheduler();
   };
   Scheduler.prototype.scheduler = function() {
     if (this.queue.length && this.run.length < this.max) {
@@ -52,6 +75,7 @@
 
     const chunkSize = 1024 * 1024; // 分片大小 1MB
     const totalChunks = Math.ceil(file.size/chunkSize);
+    fileSize = file.size;
 
     const schedule = new Scheduler();
 
@@ -60,7 +84,7 @@
 
     for (let i = 0; i < totalChunks; i++) {
       const start = i * chunkSize;
-      const end = Math.min(start + chunkSize, file.size);
+      const end = Math.min(start + chunkSize, fileSize);
       const chunk = file.slice(start, end);
 
       const formData = new FormData();
@@ -75,13 +99,14 @@
           signal,
           method: 'POST',
           headers: {
-            'Content-Range': `bytes ${start}-${end - 1}/${file.size}`,
+            'Content-Range': `bytes ${start}-${end - 1}/${fileSize}`,
           },
           body: formData,
         })
-      );
-
-      uploadedBytes += end - start;
+      )
+        .then(() => {
+          obj.uploadedBytes += end - start;
+        });
     }
   }
 
