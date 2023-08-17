@@ -8,7 +8,9 @@
 <input type="file" id="file">
 <hr>
 <button onclick="uploadHandler()">开始上传</button>
+<button onclick="abortHandler()">取消上传</button>
 <script>
+  let abortController;
   let uploadedBytes = 0;
   const fileInput = document.getElementById('file');
 
@@ -53,6 +55,9 @@
 
     const schedule = new Scheduler();
 
+    abortController = new AbortController();
+    const signal = abortController.signal;
+
     for (let i = 0; i < totalChunks; i++) {
       const start = i * chunkSize;
       const end = Math.min(start + chunkSize, file.size);
@@ -67,6 +72,7 @@
 
       schedule.add(
         fetch(url, {
+          signal,
           method: 'POST',
           headers: {
             'Content-Range': `bytes ${start}-${end - 1}/${file.size}`,
@@ -76,6 +82,13 @@
       );
 
       uploadedBytes += end - start;
+    }
+  }
+
+  function abortHandler() {
+    if (abortController) {
+      abortController.abort();
+      console.info('取消上传');
     }
   }
 </script>
