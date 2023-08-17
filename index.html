@@ -2,11 +2,82 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>index</title>
+  <title>breakPointUpload</title>
 </head>
 <body>
+<input type="file" id="file">
+<hr>
+<button onclick="uploadHandler()">开始上传</button>
 <script>
+  let uploadedBytes = 0;
+  const fileInput = document.getElementById('file');
 
+  fileInput.addEventListener('change', () => {
+    uploadedBytes = 0;
+  });
+
+  function Scheduler() {
+    this.queue = [];
+    this.run = [];
+    this.max = 5;
+  }
+  Scheduler.prototype.add = function(task) {
+    this.queue.push(task);
+    this.scheduler();
+  };
+  Scheduler.prototype.scheduler = function() {
+    if (this.queue.length && this.run.length < this.max) {
+      const promise = this.queue.shift();
+
+      this.run.push(promise);
+
+      promise.then(() => {
+        this.run.splice(this.run.indexOf(promise), 1);
+      });
+
+      return promise;
+    } else {
+      return Promise.race(this.run)
+        .then(() => {
+          return this.scheduler();
+        });
+    }
+  };
+
+  async function uploadHandler() {
+    const file = fileInput.files[0];
+    const url = '/upload';
+
+    const chunkSize = 1024 * 1024; // 分片大小 1MB
+    const totalChunks = Math.ceil(file.size/chunkSize);
+
+    const schedule = new Scheduler();
+
+    for (let i = 0; i < totalChunks; i++) {
+      const start = i * chunkSize;
+      const end = Math.min(start + chunkSize, file.size);
+      const chunk = file.slice(start, end);
+
+      const formData = new FormData();
+
+      formData.append('index', i);
+      formData.append('filename', file.name);
+      formData.append('totalChunks', totalChunks);
+      formData.append('chunk', chunk);
+
+      schedule.add(
+        fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Range': `bytes ${start}-${end - 1}/${file.size}`,
+          },
+          body: formData,
+        })
+      );
+
+      uploadedBytes += end - start;
+    }
+  }
 </script>
 </body>
 </html>
